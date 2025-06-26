@@ -180,7 +180,8 @@ app.get('/api/init', async (req, res) => {
     const subjects = await Subject.distinct('name');
     const departments = await Department.distinct('name');
     const years = ['FY', 'SY', 'TY', 'BTech'];
-    const divisions = await Student.distinct('division');
+    const divisions = ['A', 'B', 'C', 'D', 'E', 'F'];
+    
     const faModes = ['Online Quiz', 'Offline Test', 'Assignment', 'Presentation', 'Poster', 'Other'];
 
     // If no subjects/departments exist, seed some initial data
