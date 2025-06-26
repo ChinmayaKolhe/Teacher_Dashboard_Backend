@@ -366,67 +366,6 @@ app.post('/api/queries/respond', async (req, res) => {
     });
   }
 });
-// Add new subjects
-app.post('/api/subjects', async (req, res) => {
-  try {
-    const { subjects } = req.body;
-    
-    if (!subjects || !Array.isArray(subjects)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Subjects array is required'
-      });
-    }
-
-    // Add to database (implementation depends on your DB)
-    // Example for MongoDB:
-    // await Subject.insertMany(subjects.map(name => ({ name })));
-    
-    // For in-memory database (as in your example):
-    classData.subjects = [...new Set([...classData.subjects, ...subjects])];
-    
-    res.json({
-      success: true,
-      message: `${subjects.length} subjects added successfully`
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-// Add new departments
-app.post('/api/departments', async (req, res) => {
-  try {
-    const { departments } = req.body;
-    
-    if (!departments || !Array.isArray(departments)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Departments array is required'
-      });
-    }
-
-    // Add to database (implementation depends on your DB)
-    // Example for MongoDB:
-    // await Department.insertMany(departments.map(name => ({ name })));
-    
-    // For in-memory database:
-    classData.departments = [...new Set([...classData.departments, ...departments])];
-    
-    res.json({
-      success: true,
-      message: `${departments.length} departments added successfully`
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
 // 6. Set FA Mode
 app.post('/api/fa-mode', async (req, res) => {
   try {
@@ -491,7 +430,90 @@ app.get('/api/fa-mode', async (req, res) => {
     });
   }
 });
+// Add these routes before your error handling middleware
 
+// 8. Add subjects (Admin endpoint)
+app.post('/api/subjects', async (req, res) => {
+  try {
+    const { subjects } = req.body;
+    
+    if (!subjects || !Array.isArray(subjects)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Subjects array is required'
+      });
+    }
+
+    // Get existing subjects
+    const existingSubjects = await Marks.distinct('subject');
+    
+    // Combine and remove duplicates
+    const allSubjects = [...new Set([...existingSubjects, ...subjects])];
+    
+    res.json({
+      success: true,
+      data: allSubjects,
+      message: `${subjects.length} subjects added successfully`
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// 9. Add departments (Admin endpoint)
+app.post('/api/departments', async (req, res) => {
+  try {
+    const { departments } = req.body;
+    
+    if (!departments || !Array.isArray(departments)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Departments array is required'
+      });
+    }
+
+    // Get existing departments
+    const existingDepartments = await Student.distinct('department');
+    
+    // Combine and remove duplicates
+    const allDepartments = [...new Set([...existingDepartments, ...departments])];
+    
+    res.json({
+      success: true,
+      data: allDepartments,
+      message: `${departments.length} departments added successfully`
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// 10. Debug endpoint to check current data
+app.get('/api/debug/data', async (req, res) => {
+  try {
+    const subjects = await Marks.distinct('subject');
+    const departments = await Student.distinct('department');
+    
+    res.json({
+      success: true,
+      data: {
+        subjects,
+        departments
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
