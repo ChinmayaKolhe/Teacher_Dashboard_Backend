@@ -25,7 +25,12 @@ const studentSchema = new mongoose.Schema({
   name: String,
   department: String,
   year: String,
-  division: String
+  division: {
+    type: String,
+    required: true,
+    enum: ['A', 'B', 'C', 'D', 'E', 'F'],
+    uppercase: true
+  },
 });
 
 const marksSchema = new mongoose.Schema({
@@ -44,7 +49,12 @@ const querySchema = new mongoose.Schema({
   studentId: String,
   studentName: String,
   subject: String,
-  division: String,
+  division: {
+    type: String,
+    required: true,
+    enum: ['A', 'B', 'C', 'D', 'E', 'F'],
+    uppercase: true
+  },
   department: String,
   year: String,
   message: String,
@@ -62,7 +72,12 @@ const notificationSchema = new mongoose.Schema({
 
 const faSettingSchema = new mongoose.Schema({
   subject: String,
-  division: String,
+  division: {
+    type: String,
+    required: true,
+    enum: ['A', 'B', 'C', 'D', 'E', 'F'], 
+    uppercase: true
+  },
   department: String,
   year: String,
   mode: String,
