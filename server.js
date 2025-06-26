@@ -69,12 +69,39 @@ const faSettingSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const subjectSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    unique: true,
+    uppercase: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+const departmentSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
 // MongoDB Models
 const Student = mongoose.model('Student', studentSchema);
 const Marks = mongoose.model('Marks', marksSchema);
 const Query = mongoose.model('Query', querySchema);
 const Notification = mongoose.model('Notification', notificationSchema);
 const FASetting = mongoose.model('FASetting', faSettingSchema);
+const Subject = mongoose.model('Subject', subjectSchema);
+const Department = mongoose.model('Department', departmentSchema);
 
 // Middleware
 app.use(cors());
@@ -150,11 +177,30 @@ const calculateClassStats = async (filter) => {
 app.get('/api/init', async (req, res) => {
   try {
     // Get distinct values from the database
-    const subjects = await Marks.distinct('subject');
-    const departments = await Student.distinct('department');
-    const years = await Student.distinct('year');
+    const subjects = await Subject.distinct('name');
+    const departments = await Department.distinct('name');
+    const years = ['FY', 'SY', 'TY', 'BTech'];
     const divisions = await Student.distinct('division');
     const faModes = ['Online Quiz', 'Offline Test', 'Assignment', 'Presentation', 'Poster', 'Other'];
+
+    // If no subjects/departments exist, seed some initial data
+    if (subjects.length === 0) {
+      await Subject.insertMany([
+        { name: 'DBMS' },
+        { name: 'DATA STRUCTURES' },
+        { name: 'OPERATING SYSTEMS' }
+      ]);
+      subjects.push('DBMS', 'DATA STRUCTURES', 'OPERATING SYSTEMS');
+    }
+
+    if (departments.length === 0) {
+      await Department.insertMany([
+        { name: 'Computer Engineering' },
+        { name: 'Information Technology' },
+        { name: 'Mechanical Engineering' }
+      ]);
+      departments.push('Computer Engineering', 'Information Technology', 'Mechanical Engineering');
+    }
 
     res.json({
       success: true,
@@ -366,6 +412,7 @@ app.post('/api/queries/respond', async (req, res) => {
     });
   }
 });
+
 // 6. Set FA Mode
 app.post('/api/fa-mode', async (req, res) => {
   try {
@@ -430,7 +477,6 @@ app.get('/api/fa-mode', async (req, res) => {
     });
   }
 });
-// Add these routes before your error handling middleware
 
 // 8. Add subjects (Admin endpoint)
 app.post('/api/subjects', async (req, res) => {
@@ -444,16 +490,19 @@ app.post('/api/subjects', async (req, res) => {
       });
     }
 
-    // Get existing subjects
-    const existingSubjects = await Marks.distinct('subject');
-    
-    // Combine and remove duplicates
-    const allSubjects = [...new Set([...existingSubjects, ...subjects])];
+    // Insert new subjects (ignore duplicates)
+    const results = await Subject.insertMany(
+      subjects.map(name => ({ name: name.toUpperCase() })),
+      { ordered: false }
+    ).catch(err => {}); // Silently handle duplicate errors
+
+    // Get all distinct subjects
+    const allSubjects = await Subject.distinct('name');
     
     res.json({
       success: true,
       data: allSubjects,
-      message: `${subjects.length} subjects added successfully`
+      message: `Subjects processed (${subjects.length} requested)`
     });
   } catch (error) {
     res.status(500).json({
@@ -475,16 +524,19 @@ app.post('/api/departments', async (req, res) => {
       });
     }
 
-    // Get existing departments
-    const existingDepartments = await Student.distinct('department');
-    
-    // Combine and remove duplicates
-    const allDepartments = [...new Set([...existingDepartments, ...departments])];
+    // Insert new departments (ignore duplicates)
+    const results = await Department.insertMany(
+      departments.map(name => ({ name })),
+      { ordered: false }
+    ).catch(err => {}); // Silently handle duplicate errors
+
+    // Get all distinct departments
+    const allDepartments = await Department.distinct('name');
     
     res.json({
       success: true,
       data: allDepartments,
-      message: `${departments.length} departments added successfully`
+      message: `Departments processed (${departments.length} requested)`
     });
   } catch (error) {
     res.status(500).json({
@@ -497,8 +549,8 @@ app.post('/api/departments', async (req, res) => {
 // 10. Debug endpoint to check current data
 app.get('/api/debug/data', async (req, res) => {
   try {
-    const subjects = await Marks.distinct('subject');
-    const departments = await Student.distinct('department');
+    const subjects = await Subject.distinct('name');
+    const departments = await Department.distinct('name');
     
     res.json({
       success: true,
@@ -514,6 +566,7 @@ app.get('/api/debug/data', async (req, res) => {
     });
   }
 });
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
